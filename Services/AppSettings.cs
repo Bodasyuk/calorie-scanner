@@ -5,8 +5,9 @@ public static class AppSettings
 {
 	const string KeyName = "gemini_api_key";
 	const string ModelName = "gemini_model";
-	public const string DefaultModel = "gemini-3.8-flash";
-	const string RetiredModel = "gemini-2.5-flash"; // Google stopped serving it to new users
+	public const string DefaultModel = "gemini-3.1-flash-lite"; // answered a photo in ~4 s in testing
+	// earlier defaults: 2.5-flash is closed to new users, 3.8-flash was overloaded; people who saved them move to the new default
+	static readonly string[] RetiredModels = ["gemini-2.5-flash", "gemini-3.8-flash"];
 
 	public static async Task<string> GetApiKeyAsync()
 	{
@@ -29,7 +30,7 @@ public static class AppSettings
 		get
 		{
 			var saved = Preferences.Default.Get(ModelName, DefaultModel);
-			return saved == RetiredModel ? DefaultModel : saved;
+			return RetiredModels.Contains(saved) ? DefaultModel : saved;
 		}
 		set => Preferences.Default.Set(ModelName, string.IsNullOrWhiteSpace(value) ? DefaultModel : value.Trim());
 	}

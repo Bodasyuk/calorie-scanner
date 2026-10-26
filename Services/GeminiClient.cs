@@ -9,9 +9,12 @@ public class GeminiException(string message) : Exception(message);
 
 public class GeminiClient
 {
-	static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
+	// timeouts are enforced per call with a cancellation token, so there is no HttpClient-wide limit
+	static readonly HttpClient Http = new() { Timeout = Timeout.InfiniteTimeSpan };
 
-	const int MaxAttempts = 4;
+	// nobody should wait longer than this for a photo; slow or busy models are skipped in favour of the next one
+	static readonly TimeSpan TotalBudget = TimeSpan.FromSeconds(12);
+	static readonly string[] FallbackModels = [AppSettings.DefaultModel, "gemini-flash-lite-latest"];
 
 	const string Prompt =
 		"You are a nutrition assistant. Look at the photo of a meal and list every distinct food or drink you can see. " +
@@ -41,32 +44,39 @@ public class GeminiClient
 			},
 		};
 
-		var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
+		using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		budget.CancelAfter(TotalBudget);
 
-		for (var attempt = 1; ; attempt++)
+		string? lastError = null;
+		foreach (var candidate in new[] { model }.Concat(FallbackModels).Distinct())
 		{
+			var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(candidate)}:generateContent";
+
 			// the key goes in a header, not the URL, so it doesn't end up in logs
 			using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
 			request.Headers.Add("x-goog-api-key", apiKey);
 
-			HttpResponseMessage response;
-			try { response = await Http.SendAsync(request, ct); }
-			catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
-			catch (TaskCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
-
-			var json = await response.Content.ReadAsStringAsync(ct);
-			if (response.IsSuccessStatusCode)
-				return Parse(json);
-
-			// 500/502/503/504 are Google-side overloads and usually clear within seconds
-			var status = (int)response.StatusCode;
-			if (attempt < MaxAttempts && status is 500 or 502 or 503 or 504)
+			try
 			{
-				await Task.Delay(TimeSpan.FromSeconds(2 * attempt), ct);
-				continue;
+				using var response = await Http.SendAsync(request, budget.Token);
+				var json = await response.Content.ReadAsStringAsync(budget.Token);
+				if (response.IsSuccessStatusCode)
+					return Parse(json);
+
+				// busy (5xx) or retired (404) model: try the next one; anything else (bad key, quota) won't improve
+				var status = (int)response.StatusCode;
+				lastError = Describe(status, json);
+				if (status is not (404 or 500 or 502 or 503 or 504))
+					throw new GeminiException(lastError);
 			}
-			throw new GeminiException(Describe(status, json));
+			catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
+			catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+			{
+				throw new GeminiException("The AI is too slow right now. Please try again.");
+			}
 		}
+
+		throw new GeminiException(lastError ?? "Google's AI is busy right now. Please try again in a minute.");
 	}
 
 	/// <summary>Models this key can call for text+image answers, fastest-looking first.</summary>
@@ -79,12 +89,15 @@ public class GeminiClient
 			"https://generativelanguage.googleapis.com/v1beta/models?pageSize=200");
 		request.Headers.Add("x-goog-api-key", apiKey);
 
-		HttpResponseMessage response;
-		try { response = await Http.SendAsync(request, ct); }
-		catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
-		catch (TaskCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
+		using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+		timeout.CancelAfter(TimeSpan.FromSeconds(10));
 
-		var json = await response.Content.ReadAsStringAsync(ct);
+		HttpResponseMessage response;
+		try { response = await Http.SendAsync(request, timeout.Token); }
+		catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
+		catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
+
+		var json = await response.Content.ReadAsStringAsync(timeout.Token);
 		if (!response.IsSuccessStatusCode)
 			throw new GeminiException(Describe((int)response.StatusCode, json));
 
