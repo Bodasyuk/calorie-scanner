@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:CalorieScanner.Models"
+             x:Class="CalorieScanner.MainPage"
+             Title="Calorie Scanner">
+
+	<ContentPage.ToolbarItems>
+		<ToolbarItem Text="Settings" Clicked="OnSettingsClicked" />
+	</ContentPage.ToolbarItems>
+
+	<ScrollView>
+		<VerticalStackLayout Padding="20" Spacing="14">
+
+			<Border StrokeShape="RoundRectangle 16" Stroke="Transparent" HeightRequest="260"
+			        BackgroundColor="{AppThemeBinding Light=#EEEEEE, Dark=#2A2A2A}">
+				<Grid>
+					<Image x:Name="Preview" Aspect="AspectFill" />
+					<Label x:Name="PlaceholderLabel" Text="Take or choose a photo of your meal"
+					       HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.6" />
+				</Grid>
+			</Border>
+
+			<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+				<Button x:Name="TakeButton" Text="Take photo" Clicked="OnTakePhotoClicked" />
+				<Button x:Name="PickButton" Grid.Column="1" Text="Choose photo" Clicked="OnPickPhotoClicked" />
+			</Grid>
+
+			<Entry x:Name="HintEntry" Placeholder="Optional hint, e.g. 'rice with chicken, about 300 g'" />
+
+			<Button x:Name="AnalyzeButton" Text="Calculate calories" IsEnabled="False" Clicked="OnAnalyzeClicked" />
+
+			<ActivityIndicator x:Name="Busy" IsRunning="False" IsVisible="False" />
+			<Label x:Name="StatusLabel" IsVisible="False" TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" />
+
+			<Border x:Name="TotalsCard" IsVisible="False" StrokeShape="RoundRectangle 16" Padding="16"
+			        Stroke="Transparent" BackgroundColor="{AppThemeBinding Light=#E0F2F1, Dark=#1F3A37}">
+				<VerticalStackLayout Spacing="4">
+					<Label x:Name="TotalCaloriesLabel" FontSize="32" FontAttributes="Bold" />
+					<Label x:Name="TotalMacrosLabel" Opacity="0.8" />
+					<Label Text="Estimate only. A photo cannot show oil, sauces or exact weight." FontSize="12" Opacity="0.6" />
+				</VerticalStackLayout>
+			</Border>
+
+			<VerticalStackLayout x:Name="ItemsLayout" Spacing="10">
+				<BindableLayout.ItemTemplate>
+					<DataTemplate x:DataType="models:MealItem">
+						<Border StrokeShape="RoundRectangle 12" Padding="12" Stroke="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
+							<Grid ColumnDefinitions="*,90" RowDefinitions="Auto,Auto" ColumnSpacing="10">
+								<Label Text="{Binding Name}" FontAttributes="Bold" VerticalOptions="Center" />
+								<Entry Grid.Column="1" Text="{Binding Grams, Mode=TwoWay}" Keyboard="Numeric"
+								       HorizontalTextAlignment="End" Placeholder="grams" TextChanged="OnGramsChanged" />
+								<Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" FontSize="13" Opacity="0.7" />
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</BindableLayout.ItemTemplate>
+			</VerticalStackLayout>
+
+		</VerticalStackLayout>
+	</ScrollView>
+</ContentPage>
