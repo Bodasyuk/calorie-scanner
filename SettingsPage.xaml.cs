@@ -24,10 +24,10 @@ public partial class SettingsPage : ContentPage
 			var models = await new GeminiClient().ListModelsAsync((KeyEntry.Text ?? "").Trim());
 			if (models.Count == 0)
 			{
-				await DisplayAlert("No models", "This key has no models that can read photos.", "OK");
+				await DisplayAlertAsync("No models", "This key has no models that can read photos.", "OK");
 				return;
 			}
-			var choice = await DisplayActionSheet("Choose a model", "Cancel", null, models.Take(12).ToArray());
+			var choice = await DisplayActionSheetAsync("Choose a model", "Cancel", null, models.Take(12).ToArray());
 			if (!string.IsNullOrEmpty(choice) && choice != "Cancel")
 			{
 				ModelEntry.Text = choice;
@@ -37,7 +37,7 @@ public partial class SettingsPage : ContentPage
 		}
 		catch (GeminiException ex)
 		{
-			await DisplayAlert("Could not load models", ex.Message, "OK");
+			await DisplayAlertAsync("Could not load models", ex.Message, "OK");
 		}
 		finally
 		{
