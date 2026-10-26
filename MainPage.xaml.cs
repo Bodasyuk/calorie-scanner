@@ -16,7 +16,65 @@ public partial class MainPage : ContentPage
 	public MainPage()
 	{
 		InitializeComponent();
+#if WINDOWS
+		Loaded += (_, _) => AddPasteShortcut();
+#else
+		// pasting a picture is only built for Windows; phones use the camera and photo library
+		PasteButton.IsVisible = false;
+		ButtonRow.ColumnDefinitions = [new ColumnDefinition(GridLength.Star), new ColumnDefinition(GridLength.Star)];
+#endif
 	}
+
+#if WINDOWS
+	// Ctrl+V pastes a picture, but only when the clipboard holds one, so pasting text into the hint box still works
+	void AddPasteShortcut()
+	{
+		if (Handler?.PlatformView is not Microsoft.UI.Xaml.FrameworkElement view) return;
+
+		var shortcut = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
+		{
+			Key = Windows.System.VirtualKey.V,
+			Modifiers = Windows.System.VirtualKeyModifiers.Control,
+		};
+		shortcut.Invoked += async (_, args) =>
+		{
+			if (!ClipboardImage.HasImageNow()) return;
+			args.Handled = true;
+			await PasteAsync();
+		};
+		view.KeyboardAccelerators.Add(shortcut);
+	}
+#endif
+
+	async void OnPasteClicked(object? sender, EventArgs e)
+	{
+#if WINDOWS
+		await PasteAsync();
+#else
+		await Task.CompletedTask; // the button is hidden on phones
+#endif
+	}
+
+#if WINDOWS
+	async Task PasteAsync()
+	{
+		try
+		{
+			var bytes = await ClipboardImage.GetAsync();
+			if (bytes is null)
+			{
+				ShowStatus("No picture on the clipboard. Copy a photo first, then press Paste.");
+				return;
+			}
+			await using var stream = new MemoryStream(bytes);
+			UseImage(stream);
+		}
+		catch (Exception ex)
+		{
+			ShowStatus($"Could not paste the picture. {ex.Message}");
+		}
+	}
+#endif
 
 	async void OnSettingsClicked(object? sender, EventArgs e) => await Navigation.PushAsync(new SettingsPage());
 
@@ -42,14 +100,7 @@ public partial class MainPage : ContentPage
 			if (photo is null) return; // user cancelled
 
 			await using var stream = await photo.OpenReadAsync();
-			using var image = PlatformImage.FromStream(stream);
-			using IImage small = image.Downsize(MaxImageSide, true);
-			_jpeg = small.AsBytes(ImageFormat.Jpeg, 0.8f);
-
-			Preview.Source = ImageSource.FromStream(() => new MemoryStream(_jpeg));
-			PlaceholderLabel.IsVisible = false;
-			AnalyzeButton.IsEnabled = true;
-			ClearResult();
+			UseImage(stream);
 		}
 		catch (PermissionException)
 		{
@@ -59,6 +110,20 @@ public partial class MainPage : ContentPage
 		{
 			ShowStatus($"Could not load the photo. {ex.Message}");
 		}
+	}
+
+	/// <summary>Shrinks a picture (taken, chosen or pasted) and shows it, ready to be analysed.</summary>
+	void UseImage(Stream stream)
+	{
+		using var image = PlatformImage.FromStream(stream);
+		using IImage small = image.Downsize(MaxImageSide, true);
+		_jpeg = small.AsBytes(ImageFormat.Jpeg, 0.8f);
+
+		var bytes = _jpeg;
+		Preview.Source = ImageSource.FromStream(() => new MemoryStream(bytes));
+		PlaceholderLabel.IsVisible = false;
+		AnalyzeButton.IsEnabled = true;
+		ClearResult();
 	}
 
 	async void OnAnalyzeClicked(object? sender, EventArgs e)
@@ -116,7 +181,7 @@ public partial class MainPage : ContentPage
 	{
 		Busy.IsVisible = Busy.IsRunning = busy;
 		AnalyzeButton.IsEnabled = !busy && _jpeg is not null;
-		TakeButton.IsEnabled = PickButton.IsEnabled = !busy;
+		TakeButton.IsEnabled = PickButton.IsEnabled = PasteButton.IsEnabled = !busy;
 	}
 
 	void ShowStatus(string message)

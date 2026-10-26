@@ -21,9 +21,10 @@
 				</Grid>
 			</Border>
 
-			<Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+			<Grid x:Name="ButtonRow" ColumnDefinitions="*,*,*" ColumnSpacing="10">
 				<Button x:Name="TakeButton" Text="Take photo" Clicked="OnTakePhotoClicked" />
 				<Button x:Name="PickButton" Grid.Column="1" Text="Choose photo" Clicked="OnPickPhotoClicked" />
+				<Button x:Name="PasteButton" Grid.Column="2" Text="Paste" Clicked="OnPasteClicked" />
 			</Grid>
 
 			<Entry x:Name="HintEntry" Placeholder="Optional hint, e.g. 'rice with chicken, about 300 g'" />
