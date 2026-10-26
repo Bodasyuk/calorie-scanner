@@ -18,6 +18,7 @@ public partial class MainPage : ContentPage
 	const double MaxTwoColumns = 1000;
 
 	bool? _wide;
+	bool _busy;
 
 	public MainPage()
 	{
@@ -173,7 +174,7 @@ public partial class MainPage : ContentPage
 
 	async void OnAnalyzeClicked(object? sender, EventArgs e)
 	{
-		if (_jpeg is null) return;
+		if (_jpeg is null || _busy) return;
 
 		SetBusy(true);
 		try
@@ -239,8 +240,13 @@ public partial class MainPage : ContentPage
 
 	void SetBusy(bool busy)
 	{
+		_busy = busy;
 		Busy.IsVisible = Busy.IsRunning = busy;
-		AnalyzeButton.IsEnabled = !busy && _jpeg is not null;
+		// The Calculate button stays enabled while working: disabling the focused button makes the platform move
+		// focus to another control, which scrolls the page. OnAnalyzeClicked ignores taps while _busy instead.
+		AnalyzeButton.IsEnabled = _jpeg is not null;
+		AnalyzeButton.Text = busy ? "Calculating…" : "Calculate calories";
+		AnalyzeButton.Opacity = busy ? 0.7 : 1;
 		TakeButton.IsEnabled = PickButton.IsEnabled = PasteButton.IsEnabled = !busy;
 	}
 
