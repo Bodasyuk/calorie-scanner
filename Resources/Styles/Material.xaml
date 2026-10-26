@@ -42,7 +42,7 @@
         <Setter Property="StrokeShape" Value="RoundRectangle 14" />
         <Setter Property="Stroke" Value="Transparent" />
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}" />
-        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Padding" Value="8,6" />
     </Style>
 
     <!-- outlined text field box; the floating label is a Label laid over its top edge -->

@@ -181,6 +181,7 @@ public partial class MainPage : ContentPage
 			var key = await AppSettings.GetApiKeyAsync();
 			_items = await _gemini.AnalyzeAsync(_jpeg, HintEntry.Text ?? "", key, AppSettings.Model);
 			ShowResult();
+			await ScrollToResultAsync();
 		}
 		catch (GeminiException ex)
 		{
@@ -194,6 +195,16 @@ public partial class MainPage : ContentPage
 		{
 			SetBusy(false);
 		}
+	}
+
+	/// <summary>On a phone the results sit below the form, so bring the calorie card into view.</summary>
+	async Task ScrollToResultAsync()
+	{
+		if (_items.Count == 0) return;
+		await Task.Delay(250); // let the new results finish laying out before measuring their position
+		await PageScroll.ScrollToAsync(TotalsCard, ScrollToPosition.Start, true);
+		// leave a little air above the card instead of cutting its rounded top edge
+		await PageScroll.ScrollToAsync(PageScroll.ScrollX, Math.Max(0, PageScroll.ScrollY - 24), true);
 	}
 
 	void ShowResult()
@@ -220,9 +231,10 @@ public partial class MainPage : ContentPage
 	void UpdateTotals()
 	{
 		TotalCaloriesLabel.Text = $"{_items.Sum(i => i.Calories):0}";
-		ProteinLabel.Text = $"{_items.Sum(i => i.Protein):0} g";
-		CarbsLabel.Text = $"{_items.Sum(i => i.Carbs):0} g";
-		FatLabel.Text = $"{_items.Sum(i => i.Fat):0} g";
+		// non-breaking space so "28 g" never wraps onto two lines in a narrow chip
+		ProteinLabel.Text = $"{_items.Sum(i => i.Protein):0} g";
+		CarbsLabel.Text = $"{_items.Sum(i => i.Carbs):0} g";
+		FatLabel.Text = $"{_items.Sum(i => i.Fat):0} g";
 	}
 
 	void SetBusy(bool busy)

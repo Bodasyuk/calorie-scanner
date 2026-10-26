@@ -11,7 +11,7 @@
 		<ToolbarItem Text="Settings" Clicked="OnSettingsClicked" />
 	</ContentPage.ToolbarItems>
 
-	<ScrollView>
+	<ScrollView x:Name="PageScroll">
 		<!-- ApplyLayout() sizes this and switches it between one and two columns by available width -->
 		<Grid x:Name="Root" Padding="16,8,16,32" ColumnSpacing="20" RowSpacing="16" HorizontalOptions="Center">
 
@@ -73,29 +73,29 @@
 						<Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
 							<Border Style="{StaticResource MacroChip}">
 								<VerticalStackLayout>
-									<HorizontalStackLayout Spacing="5">
+									<HorizontalStackLayout Spacing="4">
 										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#C0562E" VerticalOptions="Center" />
-										<Label Text="Protein" FontSize="12" Opacity="0.75" />
+										<Label Text="Protein" FontSize="11" Opacity="0.75" LineBreakMode="NoWrap" />
 									</HorizontalStackLayout>
-									<Label x:Name="ProteinLabel" FontSize="18" FontAttributes="Bold" />
+									<Label x:Name="ProteinLabel" FontSize="17" FontAttributes="Bold" LineBreakMode="NoWrap" />
 								</VerticalStackLayout>
 							</Border>
 							<Border Grid.Column="1" Style="{StaticResource MacroChip}">
 								<VerticalStackLayout>
-									<HorizontalStackLayout Spacing="5">
+									<HorizontalStackLayout Spacing="4">
 										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#BA7517" VerticalOptions="Center" />
-										<Label Text="Carbs" FontSize="12" Opacity="0.75" />
+										<Label Text="Carbs" FontSize="11" Opacity="0.75" LineBreakMode="NoWrap" />
 									</HorizontalStackLayout>
-									<Label x:Name="CarbsLabel" FontSize="18" FontAttributes="Bold" />
+									<Label x:Name="CarbsLabel" FontSize="17" FontAttributes="Bold" LineBreakMode="NoWrap" />
 								</VerticalStackLayout>
 							</Border>
 							<Border Grid.Column="2" Style="{StaticResource MacroChip}">
 								<VerticalStackLayout>
-									<HorizontalStackLayout Spacing="5">
+									<HorizontalStackLayout Spacing="4">
 										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#7C6BDB" VerticalOptions="Center" />
-										<Label Text="Fat" FontSize="12" Opacity="0.75" />
+										<Label Text="Fat" FontSize="11" Opacity="0.75" LineBreakMode="NoWrap" />
 									</HorizontalStackLayout>
-									<Label x:Name="FatLabel" FontSize="18" FontAttributes="Bold" />
+									<Label x:Name="FatLabel" FontSize="17" FontAttributes="Bold" LineBreakMode="NoWrap" />
 								</VerticalStackLayout>
 							</Border>
 						</Grid>
