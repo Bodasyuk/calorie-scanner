@@ -13,7 +13,7 @@
 			       Text="Get a free key at aistudio.google.com. It is stored only on this phone, in secure storage." />
 
 			<Label Text="Model" FontAttributes="Bold" Margin="0,10,0,0" />
-			<Entry x:Name="ModelEntry" Placeholder="gemini-2.5-flash" Keyboard="Plain" />
+			<Entry x:Name="ModelEntry" Placeholder="gemini-3.8-flash" Keyboard="Plain" />
 			<Label FontSize="13" Opacity="0.7"
 			       Text="Change this if Google retires the default model. Any Gemini model that accepts images works." />
 

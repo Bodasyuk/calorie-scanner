@@ -5,7 +5,8 @@ public static class AppSettings
 {
 	const string KeyName = "gemini_api_key";
 	const string ModelName = "gemini_model";
-	public const string DefaultModel = "gemini-2.5-flash";
+	public const string DefaultModel = "gemini-3.8-flash";
+	const string RetiredModel = "gemini-2.5-flash"; // Google stopped serving it to new users
 
 	public static async Task<string> GetApiKeyAsync()
 	{
@@ -25,7 +26,11 @@ public static class AppSettings
 
 	public static string Model
 	{
-		get => Preferences.Default.Get(ModelName, DefaultModel);
+		get
+		{
+			var saved = Preferences.Default.Get(ModelName, DefaultModel);
+			return saved == RetiredModel ? DefaultModel : saved;
+		}
 		set => Preferences.Default.Set(ModelName, string.IsNullOrWhiteSpace(value) ? DefaultModel : value.Trim());
 	}
 }
