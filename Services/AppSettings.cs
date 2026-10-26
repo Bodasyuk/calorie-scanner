@@ -5,9 +5,11 @@ public static class AppSettings
 {
 	const string KeyName = "gemini_api_key";
 	const string ModelName = "gemini_model";
-	public const string DefaultModel = "gemini-3.1-flash-lite"; // answered a photo in ~4 s in testing
-	// earlier defaults: 2.5-flash is closed to new users, 3.8-flash was overloaded; people who saved them move to the new default
-	static readonly string[] RetiredModels = ["gemini-2.5-flash", "gemini-3.8-flash"];
+	// In a test with a meal photo these two answered 3 of 3 times in 2-8 s; the other models tried timed out or returned 503
+	public const string DefaultModel = "gemini-3.1-flash-lite-preview";
+	public const string FallbackModel = "gemini-3-flash-preview";
+	// earlier defaults: 2.5-flash is closed to new users, 3.8-flash and 3.1-flash-lite were overloaded; people who saved them move to the new default
+	static readonly string[] RetiredModels = ["gemini-2.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"];
 
 	public static async Task<string> GetApiKeyAsync()
 	{

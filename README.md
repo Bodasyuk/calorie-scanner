@@ -23,6 +23,6 @@ You can correct the weight of each food and the totals update. Estimates are rou
 ## Notes
 
 - The key is kept in the phone's secure storage (Keychain). It is never in the code or in git.
-- The default model is `gemini-3.1-flash-lite`. If Google retires it, change the model name in Settings.
+- The default model is `gemini-3.1-flash-lite-preview` (with `gemini-3-flash-preview` as a backup request). If Google retires it, change the model name in Settings.
 - The free tier has daily limits and Google may use free-tier prompts to improve its models. Check the current terms.
 - Android: `dotnet workload install maui-android`, then `dotnet build -f net10.0-android -t:Run`.

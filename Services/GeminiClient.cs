@@ -7,14 +7,25 @@ namespace CalorieScanner.Services;
 
 public class GeminiException(string message) : Exception(message);
 
+/// <summary>A failure that another model or a second try may not have (overload, retired model).</summary>
+class TransientGeminiException(string message) : GeminiException(message);
+
 public class GeminiClient
 {
 	// timeouts are enforced per call with a cancellation token, so there is no HttpClient-wide limit
 	static readonly HttpClient Http = new() { Timeout = Timeout.InfiniteTimeSpan };
 
-	// nobody should wait longer than this for a photo; slow or busy models are skipped in favour of the next one
+	// nobody should wait longer than this for a photo
 	static readonly TimeSpan TotalBudget = TimeSpan.FromSeconds(12);
-	static readonly string[] FallbackModels = [AppSettings.DefaultModel, "gemini-flash-lite-latest"];
+
+	// The free tier is often overloaded, so a second request starts after a short delay instead of
+	// waiting for the first to fail; the first answer wins and the rest are cancelled.
+	static readonly (string? Model, double DelaySeconds)[] Plan =
+	[
+		(null, 0),                          // the model chosen in Settings
+		(AppSettings.FallbackModel, 3),
+		(null, 6),                          // the chosen model once more, in case it recovered
+	];
 
 	const string Prompt =
 		"You are a nutrition assistant. Look at the photo of a meal and list every distinct food or drink you can see. " +
@@ -47,36 +58,61 @@ public class GeminiClient
 		using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		budget.CancelAfter(TotalBudget);
 
+		var attempts = Plan
+			.Select(p => SendAsync(p.Model ?? model, TimeSpan.FromSeconds(p.DelaySeconds), apiKey, body, budget.Token))
+			.ToList();
+
 		string? lastError = null;
-		foreach (var candidate in new[] { model }.Concat(FallbackModels).Distinct())
+		while (attempts.Count > 0)
 		{
-			var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(candidate)}:generateContent";
-
-			// the key goes in a header, not the URL, so it doesn't end up in logs
-			using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
-			request.Headers.Add("x-goog-api-key", apiKey);
-
+			var finished = await Task.WhenAny(attempts);
+			attempts.Remove(finished);
 			try
 			{
-				using var response = await Http.SendAsync(request, budget.Token);
-				var json = await response.Content.ReadAsStringAsync(budget.Token);
-				if (response.IsSuccessStatusCode)
-					return Parse(json);
-
-				// busy (5xx) or retired (404) model: try the next one; anything else (bad key, quota) won't improve
-				var status = (int)response.StatusCode;
-				lastError = Describe(status, json);
-				if (status is not (404 or 500 or 502 or 503 or 504))
-					throw new GeminiException(lastError);
+				var items = await finished;
+				budget.Cancel(); // stop the others
+				return items;
 			}
-			catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
-			catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+			catch (TransientGeminiException ex) { lastError = ex.Message; }
+			catch (OperationCanceledException) { /* the time budget ran out */ }
+			catch (GeminiException)
 			{
-				throw new GeminiException("The AI is too slow right now. Please try again.");
+				budget.Cancel(); // bad key, quota or similar: another model will not help
+				throw;
 			}
 		}
 
-		throw new GeminiException(lastError ?? "Google's AI is busy right now. Please try again in a minute.");
+		if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
+		throw new GeminiException(lastError ?? "The AI is too slow right now. Please try again.");
+	}
+
+	static async Task<List<MealItem>> SendAsync(string model, TimeSpan startDelay, string apiKey, JsonObject body, CancellationToken token)
+	{
+		if (startDelay > TimeSpan.Zero) await Task.Delay(startDelay, token);
+
+		var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
+
+		// the key goes in a header, not the URL, so it doesn't end up in logs
+		using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
+		request.Headers.Add("x-goog-api-key", apiKey);
+
+		HttpResponseMessage response;
+		try { response = await Http.SendAsync(request, token); }
+		catch (HttpRequestException) { throw new TransientGeminiException("No connection. Check your internet and try again."); }
+
+		using (response)
+		{
+			var json = await response.Content.ReadAsStringAsync(token);
+			if (response.IsSuccessStatusCode)
+				return Parse(json);
+
+			var status = (int)response.StatusCode;
+			var message = Describe(status, json);
+			// busy (5xx) or retired (404) model: another model may work; anything else will not improve
+			throw status is 404 or 500 or 502 or 503 or 504
+				? new TransientGeminiException(message)
+				: new GeminiException(message);
+		}
 	}
 
 	/// <summary>Models this key can call for text+image answers, fastest-looking first.</summary>
@@ -147,7 +183,7 @@ public class GeminiClient
 			var root = JsonNode.Parse(responseJson);
 			var text = root?["candidates"]?[0]?["content"]?["parts"]?[0]?["text"]?.GetValue<string>();
 			if (string.IsNullOrWhiteSpace(text))
-				throw new GeminiException("The AI returned no answer. Try another photo.");
+				throw new TransientGeminiException("The AI returned no answer. Try another photo.");
 
 			var items = JsonNode.Parse(text)?["items"]?.AsArray() ?? [];
 			return items.Select(i => MealItem.FromEstimate(
@@ -156,7 +192,7 @@ public class GeminiClient
 		}
 		catch (JsonException)
 		{
-			throw new GeminiException("Could not read the AI answer. Try again.");
+			throw new TransientGeminiException("Could not read the AI answer. Try again.");
 		}
 	}
 
@@ -171,8 +207,8 @@ public class GeminiClient
 		{
 			400 or 403 when message.Contains("API key", StringComparison.OrdinalIgnoreCase) => "The API key was rejected. Check it in Settings.",
 			429 => "Free daily limit reached. Try again later.",
-			500 or 502 or 503 or 504 => "Google's AI is busy right now (tried several times). Wait a minute and try again.",
 			404 => $"Model not found. Check the model name in Settings. {message}",
+			500 or 502 or 503 or 504 => "Google's AI is busy right now. Please try again in a minute.",
 			_ => $"Request failed ({status}). {message}".Trim(),
 		};
 	}
