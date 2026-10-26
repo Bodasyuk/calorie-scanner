@@ -16,6 +16,35 @@ public partial class SettingsPage : ContentPage
 		KeyEntry.Text = await AppSettings.GetApiKeyAsync();
 	}
 
+	async void OnPickModelClicked(object? sender, EventArgs e)
+	{
+		PickModelButton.IsEnabled = false;
+		try
+		{
+			var models = await new GeminiClient().ListModelsAsync((KeyEntry.Text ?? "").Trim());
+			if (models.Count == 0)
+			{
+				await DisplayAlert("No models", "This key has no models that can read photos.", "OK");
+				return;
+			}
+			var choice = await DisplayActionSheet("Choose a model", "Cancel", null, models.Take(12).ToArray());
+			if (!string.IsNullOrEmpty(choice) && choice != "Cancel")
+			{
+				ModelEntry.Text = choice;
+				SavedLabel.Text = "Tap Save to use it.";
+				SavedLabel.IsVisible = true;
+			}
+		}
+		catch (GeminiException ex)
+		{
+			await DisplayAlert("Could not load models", ex.Message, "OK");
+		}
+		finally
+		{
+			PickModelButton.IsEnabled = true;
+		}
+	}
+
 	async void OnSaveClicked(object? sender, EventArgs e)
 	{
 		await AppSettings.SetApiKeyAsync(KeyEntry.Text ?? "");

@@ -69,6 +69,37 @@ public class GeminiClient
 		}
 	}
 
+	/// <summary>Models this key can call for text+image answers, fastest-looking first.</summary>
+	public async Task<List<string>> ListModelsAsync(string apiKey, CancellationToken ct = default)
+	{
+		if (string.IsNullOrWhiteSpace(apiKey))
+			throw new GeminiException("Enter your Gemini API key first.");
+
+		using var request = new HttpRequestMessage(HttpMethod.Get,
+			"https://generativelanguage.googleapis.com/v1beta/models?pageSize=200");
+		request.Headers.Add("x-goog-api-key", apiKey);
+
+		HttpResponseMessage response;
+		try { response = await Http.SendAsync(request, ct); }
+		catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
+		catch (TaskCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
+
+		var json = await response.Content.ReadAsStringAsync(ct);
+		if (!response.IsSuccessStatusCode)
+			throw new GeminiException(Describe((int)response.StatusCode, json));
+
+		string[] skip = ["image", "tts", "embedding", "audio", "live", "imagen", "veo", "robotics", "aqa", "computer"];
+		var models = JsonNode.Parse(json)?["models"]?.AsArray() ?? [];
+		return models
+			.Where(m => m?["supportedGenerationMethods"]?.AsArray().Any(x => x?.GetValue<string>() == "generateContent") == true)
+			.Select(m => (m?["name"]?.GetValue<string>() ?? "").Replace("models/", ""))
+			.Where(n => n.StartsWith("gemini", StringComparison.OrdinalIgnoreCase) && !skip.Any(s => n.Contains(s, StringComparison.OrdinalIgnoreCase)))
+			.OrderBy(n => n.Contains("lite") ? 0 : n.Contains("flash") ? 1 : 2) // lite/flash answer fastest
+			.ThenByDescending(n => n)
+			.Distinct()
+			.ToList();
+	}
+
 	static JsonObject Schema() => new()
 	{
 		["type"] = "OBJECT",
