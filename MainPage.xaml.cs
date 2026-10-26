@@ -13,9 +13,16 @@ public partial class MainPage : ContentPage
 	byte[]? _jpeg;
 	List<MealItem> _items = [];
 
+	const double WideBreakpoint = 720;   // tablets, landscape phones, unfolded foldables, dual-screen
+	const double MaxSingleColumn = 560;
+	const double MaxTwoColumns = 1000;
+
+	bool? _wide;
+
 	public MainPage()
 	{
 		InitializeComponent();
+		SizeChanged += (_, _) => ApplyLayout(Width);
 #if WINDOWS
 		Loaded += (_, _) => AddPasteShortcut();
 #else
@@ -75,6 +82,44 @@ public partial class MainPage : ContentPage
 		}
 	}
 #endif
+
+	/// <summary>One column on phones; photo on the left and results on the right when the screen is wide.</summary>
+	void ApplyLayout(double width)
+	{
+		if (width <= 0) return;
+
+		// two columns only once there are results to put in the second one; before that the form stays centred
+		var wide = width >= WideBreakpoint && _items.Count > 0;
+		Root.WidthRequest = Math.Min(width, wide ? MaxTwoColumns : MaxSingleColumn);
+
+		// the photo grows with the column but stays a sensible size on small and large screens
+		var columnWidth = wide ? (Root.WidthRequest - 52) / 2 : Root.WidthRequest - 32;
+		PhotoCard.HeightRequest = Math.Clamp(columnWidth * 0.6, 150, 340);
+
+		if (_wide == wide) return;
+		_wide = wide;
+
+		Root.ColumnDefinitions.Clear();
+		Root.RowDefinitions.Clear();
+		if (wide)
+		{
+			Root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+			Root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+			Root.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+			Grid.SetColumn(ResultPane, 1);
+			Grid.SetRow(ResultPane, 0);
+		}
+		else
+		{
+			Root.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+			Root.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+			Root.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+			Grid.SetColumn(ResultPane, 0);
+			Grid.SetRow(ResultPane, 1);
+		}
+		Grid.SetRow(InputPane, 0);
+		Grid.SetColumn(InputPane, 0);
+	}
 
 	async void OnSettingsClicked(object? sender, EventArgs e) => await Navigation.PushAsync(new SettingsPage());
 
@@ -158,6 +203,7 @@ public partial class MainPage : ContentPage
 		TotalsCard.IsVisible = true;
 		if (_items.Count == 0) ShowStatus("No food found in the photo. Try a closer shot.");
 		UpdateTotals();
+		ApplyLayout(Width);
 	}
 
 	void ClearResult()
@@ -166,15 +212,17 @@ public partial class MainPage : ContentPage
 		BindableLayout.SetItemsSource(ItemsLayout, null);
 		TotalsCard.IsVisible = false;
 		StatusLabel.IsVisible = false;
+		ApplyLayout(Width);
 	}
 
 	void OnGramsChanged(object? sender, TextChangedEventArgs e) => UpdateTotals();
 
 	void UpdateTotals()
 	{
-		TotalCaloriesLabel.Text = $"{_items.Sum(i => i.Calories):0} kcal";
-		TotalMacrosLabel.Text =
-			$"Protein {_items.Sum(i => i.Protein):0} g  ·  Carbs {_items.Sum(i => i.Carbs):0} g  ·  Fat {_items.Sum(i => i.Fat):0} g";
+		TotalCaloriesLabel.Text = $"{_items.Sum(i => i.Calories):0}";
+		ProteinLabel.Text = $"{_items.Sum(i => i.Protein):0} g";
+		CarbsLabel.Text = $"{_items.Sum(i => i.Carbs):0} g";
+		FatLabel.Text = $"{_items.Sum(i => i.Fat):0} g";
 	}
 
 	void SetBusy(bool busy)

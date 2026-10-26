@@ -27,6 +27,21 @@ public static class AppSettings
 		catch { /* nothing sensible to do; caller shows the "not saved" case via a re-read */ }
 	}
 
+	/// <summary>"system", "light" or "dark".</summary>
+	public static string Theme
+	{
+		get => Preferences.Default.Get("theme", "system");
+		set => Preferences.Default.Set("theme", value);
+	}
+
+	public static void ApplyTheme()
+	{
+		// CALSCAN_THEME is a developer override used to preview each theme without changing the system setting
+		var choice = Environment.GetEnvironmentVariable("CALSCAN_THEME") ?? Theme;
+		if (Application.Current is { } app)
+			app.UserAppTheme = choice switch { "light" => AppTheme.Light, "dark" => AppTheme.Dark, _ => AppTheme.Unspecified };
+	}
+
 	public static string Model
 	{
 		get

@@ -2,24 +2,42 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="CalorieScanner.SettingsPage"
-             Title="Settings">
+             Title="Settings"
+             SafeAreaEdges="Container"
+             BackgroundColor="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}">
 
 	<ScrollView>
-		<VerticalStackLayout Padding="20" Spacing="12">
+		<VerticalStackLayout x:Name="Column" Padding="20,12,20,32" Spacing="18" HorizontalOptions="Center">
 
-			<Label Text="Gemini API key" FontAttributes="Bold" />
-			<Entry x:Name="KeyEntry" IsPassword="True" Placeholder="Paste your key" />
-			<Label FontSize="13" Opacity="0.7"
+			<Grid>
+				<Border Style="{StaticResource OutlinedField}">
+					<Entry x:Name="KeyEntry" IsPassword="True" Placeholder="Paste your key" />
+				</Border>
+				<Label Text="Gemini API key" Style="{StaticResource FieldLabel}" />
+			</Grid>
+			<Label FontSize="12" Opacity="0.75" Margin="4,-10,4,0"
 			       Text="Get a free key at aistudio.google.com. It is stored only on this phone, in secure storage." />
 
-			<Label Text="Model" FontAttributes="Bold" Margin="0,10,0,0" />
-			<Entry x:Name="ModelEntry" Placeholder="gemini-3.1-flash-lite-preview" Keyboard="Plain" />
-			<Button x:Name="PickModelButton" Text="Choose from available models" Clicked="OnPickModelClicked" />
-			<Label FontSize="13" Opacity="0.7"
-			       Text="Needs your key above. If answers are slow or busy, pick a 'lite' or another 'flash' model. Any Gemini model that accepts images works." />
+			<Grid Margin="0,6,0,0">
+				<Border Style="{StaticResource OutlinedField}">
+					<Entry x:Name="ModelEntry" Placeholder="gemini-3.1-flash-lite-preview" Keyboard="Plain" />
+				</Border>
+				<Label Text="Model" Style="{StaticResource FieldLabel}" />
+			</Grid>
+			<Button x:Name="PickModelButton" Text="Choose from available models" Style="{StaticResource TonalAction}"
+			        Clicked="OnPickModelClicked" />
+			<Label FontSize="12" Opacity="0.75" Margin="4,-10,4,0"
+			       Text="Needs your key above. If answers are slow or busy, pick a lite or another flash model. Any Gemini model that accepts images works." />
 
-			<Button Text="Save" Clicked="OnSaveClicked" Margin="0,16,0,0" />
-			<Label x:Name="SavedLabel" IsVisible="False" Text="Saved." />
+			<Grid Margin="0,6,0,0">
+				<Border Style="{StaticResource OutlinedField}">
+					<Picker x:Name="ThemePicker" />
+				</Border>
+				<Label Text="Appearance" Style="{StaticResource FieldLabel}" />
+			</Grid>
+
+			<Button Text="Save" Style="{StaticResource PrimaryAction}" Clicked="OnSaveClicked" Margin="0,8,0,0" />
+			<Label x:Name="SavedLabel" IsVisible="False" HorizontalTextAlignment="Center" Text="Saved." />
 
 		</VerticalStackLayout>
 	</ScrollView>

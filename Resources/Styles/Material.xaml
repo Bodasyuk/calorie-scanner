@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Material 3 style shared by every page: teal palette, pill buttons, tonal surfaces -->
+
+    <Style x:Key="PrimaryAction" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#006A60, Dark=#4DD9C5}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light=White, Dark=#00201C}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="CornerRadius" Value="26" />
+        <Setter Property="HeightRequest" Value="52" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="Normal" />
+                    <VisualState x:Name="Disabled">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#1F191C1B, Dark=#1FE0E3E1}" />
+                            <Setter Property="TextColor" Value="{AppThemeBinding Light=#61191C1B, Dark=#61E0E3E1}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TonalAction" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#CCE8E2, Dark=#1F3A36}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light=#00201C, Dark=#B7ECE3}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="HeightRequest" Value="64" />
+        <Setter Property="Padding" Value="2,8" />
+    </Style>
+
+    <Style x:Key="MacroChip" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 14" />
+        <Setter Property="Stroke" Value="Transparent" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}" />
+        <Setter Property="Padding" Value="10,6" />
+    </Style>
+
+    <!-- outlined text field box; the floating label is a Label laid over its top edge -->
+    <Style x:Key="OutlinedField" TargetType="Border">
+        <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Stroke" Value="{AppThemeBinding Light=#6F7977, Dark=#8A938F}" />
+    </Style>
+
+    <Style x:Key="FieldLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Margin" Value="12,-8,0,0" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="VerticalOptions" Value="Start" />
+        <Setter Property="HorizontalOptions" Value="Start" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light=#3F4947, Dark=#BFC9C6}" />
+    </Style>
+
+</ResourceDictionary>

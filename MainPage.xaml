@@ -1,63 +1,132 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:models="clr-namespace:CalorieScanner.Models"
              x:Class="CalorieScanner.MainPage"
-             Title="Calorie Scanner">
+             Title="Calorie Scanner"
+             SafeAreaEdges="Container"
+             BackgroundColor="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}">
 
 	<ContentPage.ToolbarItems>
 		<ToolbarItem Text="Settings" Clicked="OnSettingsClicked" />
 	</ContentPage.ToolbarItems>
 
 	<ScrollView>
-		<VerticalStackLayout Padding="20" Spacing="14">
+		<!-- ApplyLayout() sizes this and switches it between one and two columns by available width -->
+		<Grid x:Name="Root" Padding="16,8,16,32" ColumnSpacing="20" RowSpacing="16" HorizontalOptions="Center">
 
-			<Border StrokeShape="RoundRectangle 16" Stroke="Transparent" HeightRequest="260"
-			        BackgroundColor="{AppThemeBinding Light=#EEEEEE, Dark=#2A2A2A}">
-				<Grid>
-					<Image x:Name="Preview" Aspect="AspectFill" />
-					<Label x:Name="PlaceholderLabel" Text="Take or choose a photo of your meal"
-					       HorizontalOptions="Center" VerticalOptions="Center" Opacity="0.6" />
+			<VerticalStackLayout x:Name="InputPane" Spacing="14">
+
+				<Border x:Name="PhotoCard" StrokeShape="RoundRectangle 24" Stroke="Transparent" HeightRequest="200"
+				        BackgroundColor="{AppThemeBinding Light=#DDE5E3, Dark=#18211F}">
+					<Grid>
+						<Image x:Name="Preview" Aspect="AspectFill" />
+						<VerticalStackLayout x:Name="PlaceholderLabel" VerticalOptions="Center" HorizontalOptions="Center" Spacing="4" Padding="16">
+							<Image Source="{AppThemeBinding Light=ic_camera_dk.png, Dark=ic_camera_lt.png}" WidthRequest="44" HeightRequest="44" HorizontalOptions="Center" />
+							<Label Text="Add a photo of your meal" FontAttributes="Bold" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+							<Label Text="Take, choose or paste one" FontSize="12" Opacity="0.7" HorizontalOptions="Center" />
+						</VerticalStackLayout>
+					</Grid>
+				</Border>
+
+				<Grid x:Name="ButtonRow" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+					<Button x:Name="TakeButton" Text="Take" Style="{StaticResource TonalAction}" Clicked="OnTakePhotoClicked"
+					        ImageSource="{AppThemeBinding Light=ic_camera_dk.png, Dark=ic_camera_lt.png}" ContentLayout="Top,3" />
+					<Button x:Name="PickButton" Grid.Column="1" Text="Choose" Style="{StaticResource TonalAction}" Clicked="OnPickPhotoClicked"
+					        ImageSource="{AppThemeBinding Light=ic_photo_dk.png, Dark=ic_photo_lt.png}" ContentLayout="Top,3" />
+					<Button x:Name="PasteButton" Grid.Column="2" Text="Paste" Style="{StaticResource TonalAction}" Clicked="OnPasteClicked"
+					        ImageSource="{AppThemeBinding Light=ic_clipboard_dk.png, Dark=ic_clipboard_lt.png}" ContentLayout="Top,3" />
 				</Grid>
-			</Border>
 
-			<Grid x:Name="ButtonRow" ColumnDefinitions="*,*,*" ColumnSpacing="10">
-				<Button x:Name="TakeButton" Text="Take photo" Clicked="OnTakePhotoClicked" />
-				<Button x:Name="PickButton" Grid.Column="1" Text="Choose photo" Clicked="OnPickPhotoClicked" />
-				<Button x:Name="PasteButton" Grid.Column="2" Text="Paste" Clicked="OnPasteClicked" />
-			</Grid>
+				<!-- outlined text field with a floating label, as in Material -->
+				<Grid Margin="0,6,0,0">
+					<Border StrokeShape="RoundRectangle 12" StrokeThickness="1" Padding="12,0"
+					        Stroke="{AppThemeBinding Light=#6F7977, Dark=#8A938F}">
+						<Entry x:Name="HintEntry" Placeholder="rice with chicken, 300 g" />
+					</Border>
+					<Label Text="Hint (optional)" FontSize="11" Margin="12,-8,0,0" Padding="4,0" VerticalOptions="Start" HorizontalOptions="Start"
+					       BackgroundColor="{AppThemeBinding Light=#F4FBF9, Dark=#0F1413}"
+					       TextColor="{AppThemeBinding Light=#3F4947, Dark=#BFC9C6}" />
+				</Grid>
 
-			<Entry x:Name="HintEntry" Placeholder="Optional hint, e.g. 'rice with chicken, about 300 g'" />
+				<Button x:Name="AnalyzeButton" Text="Calculate calories" Style="{StaticResource PrimaryAction}"
+				        ImageSource="{AppThemeBinding Light=ic_sparkles_wh.png, Dark=ic_sparkles_dk.png}" ContentLayout="Left,8"
+				        IsEnabled="False" Clicked="OnAnalyzeClicked" />
 
-			<Button x:Name="AnalyzeButton" Text="Calculate calories" IsEnabled="False" Clicked="OnAnalyzeClicked" />
-
-			<ActivityIndicator x:Name="Busy" IsRunning="False" IsVisible="False" />
-			<Label x:Name="StatusLabel" IsVisible="False" TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" />
-
-			<Border x:Name="TotalsCard" IsVisible="False" StrokeShape="RoundRectangle 16" Padding="16"
-			        Stroke="Transparent" BackgroundColor="{AppThemeBinding Light=#E0F2F1, Dark=#1F3A37}">
-				<VerticalStackLayout Spacing="4">
-					<Label x:Name="TotalCaloriesLabel" FontSize="32" FontAttributes="Bold" />
-					<Label x:Name="TotalMacrosLabel" Opacity="0.8" />
-					<Label Text="Estimate only. A photo cannot show oil, sauces or exact weight." FontSize="12" Opacity="0.6" />
-				</VerticalStackLayout>
-			</Border>
-
-			<VerticalStackLayout x:Name="ItemsLayout" Spacing="10">
-				<BindableLayout.ItemTemplate>
-					<DataTemplate x:DataType="models:MealItem">
-						<Border StrokeShape="RoundRectangle 12" Padding="12" Stroke="{AppThemeBinding Light=#DDDDDD, Dark=#444444}">
-							<Grid ColumnDefinitions="*,90" RowDefinitions="Auto,Auto" ColumnSpacing="10">
-								<Label Text="{Binding Name}" FontAttributes="Bold" VerticalOptions="Center" />
-								<Entry Grid.Column="1" Text="{Binding Grams, Mode=TwoWay}" Keyboard="Numeric"
-								       HorizontalTextAlignment="End" Placeholder="grams" TextChanged="OnGramsChanged" />
-								<Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" FontSize="13" Opacity="0.7" />
-							</Grid>
-						</Border>
-					</DataTemplate>
-				</BindableLayout.ItemTemplate>
+				<ActivityIndicator x:Name="Busy" IsRunning="False" IsVisible="False"
+				                   Color="{AppThemeBinding Light=#006A60, Dark=#4DD9C5}" />
+				<Label x:Name="StatusLabel" IsVisible="False" HorizontalTextAlignment="Center"
+				       TextColor="{AppThemeBinding Light=#B3261E, Dark=#F2B8B5}" />
 			</VerticalStackLayout>
 
-		</VerticalStackLayout>
+			<VerticalStackLayout x:Name="ResultPane" Spacing="12">
+
+				<Border x:Name="TotalsCard" IsVisible="False" StrokeShape="RoundRectangle 24" Padding="18,14" Stroke="Transparent"
+				        BackgroundColor="{AppThemeBinding Light=#9DF2E3, Dark=#00504A}">
+					<VerticalStackLayout Spacing="10">
+						<HorizontalStackLayout Spacing="8">
+							<Label x:Name="TotalCaloriesLabel" FontSize="48" FontAttributes="Bold"
+							       TextColor="{AppThemeBinding Light=#00201C, Dark=#B7F5EA}" />
+							<Label Text="kcal" FontSize="18" VerticalOptions="End" Margin="0,0,0,9"
+							       TextColor="{AppThemeBinding Light=#00201C, Dark=#B7F5EA}" />
+						</HorizontalStackLayout>
+						<Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+							<Border Style="{StaticResource MacroChip}">
+								<VerticalStackLayout>
+									<HorizontalStackLayout Spacing="5">
+										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#C0562E" VerticalOptions="Center" />
+										<Label Text="Protein" FontSize="12" Opacity="0.75" />
+									</HorizontalStackLayout>
+									<Label x:Name="ProteinLabel" FontSize="18" FontAttributes="Bold" />
+								</VerticalStackLayout>
+							</Border>
+							<Border Grid.Column="1" Style="{StaticResource MacroChip}">
+								<VerticalStackLayout>
+									<HorizontalStackLayout Spacing="5">
+										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#BA7517" VerticalOptions="Center" />
+										<Label Text="Carbs" FontSize="12" Opacity="0.75" />
+									</HorizontalStackLayout>
+									<Label x:Name="CarbsLabel" FontSize="18" FontAttributes="Bold" />
+								</VerticalStackLayout>
+							</Border>
+							<Border Grid.Column="2" Style="{StaticResource MacroChip}">
+								<VerticalStackLayout>
+									<HorizontalStackLayout Spacing="5">
+										<BoxView WidthRequest="8" HeightRequest="8" CornerRadius="4" Color="#7C6BDB" VerticalOptions="Center" />
+										<Label Text="Fat" FontSize="12" Opacity="0.75" />
+									</HorizontalStackLayout>
+									<Label x:Name="FatLabel" FontSize="18" FontAttributes="Bold" />
+								</VerticalStackLayout>
+							</Border>
+						</Grid>
+						<Label Text="Estimate only. A photo cannot show oil, sauces or exact weight." FontSize="11" Opacity="0.75"
+						       TextColor="{AppThemeBinding Light=#00201C, Dark=#B7F5EA}" />
+					</VerticalStackLayout>
+				</Border>
+
+				<VerticalStackLayout x:Name="ItemsLayout" Spacing="10">
+					<BindableLayout.ItemTemplate>
+						<DataTemplate x:DataType="models:MealItem">
+							<Border StrokeShape="RoundRectangle 20" Padding="16,12" Stroke="Transparent"
+							        BackgroundColor="{AppThemeBinding Light=#E9F0EE, Dark=#19211F}">
+								<Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="2">
+									<Label Text="{Binding Name}" FontAttributes="Bold" FontSize="16" VerticalOptions="Center" LineBreakMode="WordWrap" />
+									<Border Grid.Column="1" StrokeShape="RoundRectangle 10" StrokeThickness="1" Padding="10,0" VerticalOptions="Center"
+									        Stroke="{AppThemeBinding Light=#6F7977, Dark=#8A938F}">
+										<HorizontalStackLayout Spacing="4">
+											<Entry Text="{Binding Grams, Mode=TwoWay}" Keyboard="Numeric" WidthRequest="64"
+											       HorizontalTextAlignment="End" TextChanged="OnGramsChanged" />
+											<Label Text="g" Opacity="0.7" VerticalOptions="Center" />
+										</HorizontalStackLayout>
+									</Border>
+									<Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Summary}" FontSize="12" Opacity="0.7" />
+								</Grid>
+							</Border>
+						</DataTemplate>
+					</BindableLayout.ItemTemplate>
+				</VerticalStackLayout>
+
+			</VerticalStackLayout>
+		</Grid>
 	</ScrollView>
 </ContentPage>

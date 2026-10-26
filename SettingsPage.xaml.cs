@@ -7,7 +7,11 @@ public partial class SettingsPage : ContentPage
 	public SettingsPage()
 	{
 		InitializeComponent();
+		// a tidy column no wider than 560, but never wider than the screen (small phones)
+		SizeChanged += (_, _) => { if (Width > 0) Column.WidthRequest = Math.Min(Width, 560); };
 		ModelEntry.Text = AppSettings.Model;
+		ThemePicker.ItemsSource = new[] { "System default", "Light", "Dark" };
+		ThemePicker.SelectedIndex = AppSettings.Theme switch { "light" => 1, "dark" => 2, _ => 0 };
 	}
 
 	protected override async void OnAppearing()
@@ -49,6 +53,8 @@ public partial class SettingsPage : ContentPage
 	{
 		await AppSettings.SetApiKeyAsync(KeyEntry.Text ?? "");
 		AppSettings.Model = ModelEntry.Text ?? "";
+		AppSettings.Theme = ThemePicker.SelectedIndex switch { 1 => "light", 2 => "dark", _ => "system" };
+		AppSettings.ApplyTheme();
 
 		var saved = await AppSettings.GetApiKeyAsync() == (KeyEntry.Text ?? "").Trim();
 		SavedLabel.Text = saved ? "Saved." : "The key could not be saved on this device.";
