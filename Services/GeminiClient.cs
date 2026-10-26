@@ -11,6 +11,8 @@ public class GeminiClient
 {
 	static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
 
+	const int MaxAttempts = 4;
+
 	const string Prompt =
 		"You are a nutrition assistant. Look at the photo of a meal and list every distinct food or drink you can see. " +
 		"For each, estimate the visible portion in grams (or millilitres for drinks) and the nutrition for that portion. " +
@@ -39,24 +41,32 @@ public class GeminiClient
 			},
 		};
 
-		// the key goes in a header, not the URL, so it doesn't end up in logs
-		using var request = new HttpRequestMessage(HttpMethod.Post,
-			$"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
+		var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
+
+		for (var attempt = 1; ; attempt++)
 		{
-			Content = JsonContent.Create(body),
-		};
-		request.Headers.Add("x-goog-api-key", apiKey);
+			// the key goes in a header, not the URL, so it doesn't end up in logs
+			using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
+			request.Headers.Add("x-goog-api-key", apiKey);
 
-		HttpResponseMessage response;
-		try { response = await Http.SendAsync(request, ct); }
-		catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
-		catch (TaskCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
+			HttpResponseMessage response;
+			try { response = await Http.SendAsync(request, ct); }
+			catch (HttpRequestException) { throw new GeminiException("No connection. Check your internet and try again."); }
+			catch (TaskCanceledException) when (!ct.IsCancellationRequested) { throw new GeminiException("The request timed out. Try again."); }
 
-		var json = await response.Content.ReadAsStringAsync(ct);
-		if (!response.IsSuccessStatusCode)
-			throw new GeminiException(Describe((int)response.StatusCode, json));
+			var json = await response.Content.ReadAsStringAsync(ct);
+			if (response.IsSuccessStatusCode)
+				return Parse(json);
 
-		return Parse(json);
+			// 500/502/503/504 are Google-side overloads and usually clear within seconds
+			var status = (int)response.StatusCode;
+			if (attempt < MaxAttempts && status is 500 or 502 or 503 or 504)
+			{
+				await Task.Delay(TimeSpan.FromSeconds(2 * attempt), ct);
+				continue;
+			}
+			throw new GeminiException(Describe(status, json));
+		}
 	}
 
 	static JsonObject Schema() => new()
@@ -117,6 +127,7 @@ public class GeminiClient
 		{
 			400 or 403 when message.Contains("API key", StringComparison.OrdinalIgnoreCase) => "The API key was rejected. Check it in Settings.",
 			429 => "Free daily limit reached. Try again later.",
+			500 or 502 or 503 or 504 => "Google's AI is busy right now (tried several times). Wait a minute and try again.",
 			404 => $"Model not found. Check the model name in Settings. {message}",
 			_ => $"Request failed ({status}). {message}".Trim(),
 		};
